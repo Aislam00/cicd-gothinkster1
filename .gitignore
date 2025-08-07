@@ -21,3 +21,12 @@ npm-debug.log
 # Application
 app/dev.db
 app/.nx/
+
+# Database files
+app/src/prisma/dev.db
+app/src/prisma/migrations/*/
+app/dist/
+app/tmp/
+app/.nx/
+app/.env
+
