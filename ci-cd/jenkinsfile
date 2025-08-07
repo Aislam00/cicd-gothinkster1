@@ -27,7 +27,7 @@ pipeline {
                     sh 'echo "DATABASE_URL=\\"file:./test.db\\"" > .env'
                     sh 'echo "JWT_SECRET=\\"test-secret-key\\"" >> .env'
                     sh 'npx prisma generate'
-                    sh 'npx prisma migrate deploy'
+                    sh 'npx prisma db push'
                 }
             }
         }
