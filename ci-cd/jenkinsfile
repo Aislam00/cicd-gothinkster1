@@ -28,21 +28,6 @@ pipeline {
                 }
             }
         }
-        
-        stage('Build Docker Image') {
-            steps {
-                dir('app') {
-                    sh 'docker build -t realworld-api:latest .'
-                }
-            }
-        }
-        
-        stage('Deploy to Dev') {
-            steps {
-                echo 'Deploying to development environment...'
-                sh 'docker run -d -p 3001:3000 --name realworld-dev realworld-api:latest || true'
-            }
-        }
     }
     
     post {
