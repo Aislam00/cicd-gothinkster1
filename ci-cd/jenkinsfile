@@ -21,6 +21,17 @@ pipeline {
             }
         }
         
+        stage('Setup Test Database') {
+            steps {
+                dir('app') {
+                    sh 'echo "DATABASE_URL=\\"file:./test.db\\"" > .env'
+                    sh 'echo "JWT_SECRET=\\"test-secret-key\\"" >> .env'
+                    sh 'npx prisma generate'
+                    sh 'npx prisma migrate deploy'
+                }
+            }
+        }
+        
         stage('Run Tests') {
             steps {
                 dir('app') {
