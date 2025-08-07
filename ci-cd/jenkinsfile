@@ -39,6 +39,17 @@ pipeline {
                 }
             }
         }
+        
+        stage('Build Docker Image') {
+            when {
+                expression { return false }  // Skip for now since tests are failing
+            }
+            steps {
+                dir('app') {
+                    sh 'docker build -t realworld-api:${BUILD_NUMBER} .'
+                }
+            }
+        }
     }
     
     post {
