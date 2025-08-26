@@ -3,12 +3,10 @@ pipeline {
     
     environment {
         AWS_REGION = 'eu-west-2'
-        ECR_REPO = '475641479654.dkr.ecr.eu-west-2.amazonaws.com/realworld-api'
-        IMAGE_TAG = "${BUILD_NUMBER}"
-    }
-    
-    tools {
-        nodejs 'NodeJS-18'
+        ECR_REGISTRY = '475641479654.dkr.ecr.eu-west-2.amazonaws.com'
+        IMAGE_NAME = 'realworld-api'
+        ASG_NAME = 'realworld-dev-app-asg'
+        DATABASE_URL = 'file:./test.db'
     }
     
     stages {
@@ -18,70 +16,110 @@ pipeline {
             }
         }
         
-        stage('Install') {
+        stage('Build Application') {
             steps {
                 dir('app') {
-                    sh 'npm ci'
-                    sh 'npx prisma generate'
+                    script {
+                        sh 'npm install'
+                        sh 'npx nx build --prod'
+                    }
                 }
             }
         }
         
-        stage('Test') {
+        stage('Run Tests') {
             steps {
                 dir('app') {
-                    sh '''
-                        echo "DATABASE_URL=file:./test.db" > .env
-                        echo "JWT_SECRET=test-secret" >> .env
-                        npx prisma db push --force-reset
-                        npm test
-                    '''
+                    script {
+                        sh 'npx prisma generate'
+                        sh 'npx prisma db push --force-reset'
+                        sh 'npm test -- --watch=false --passWithNoTests'
+                    }
                 }
             }
         }
         
-        stage('Build') {
+        stage('Build Docker Image') {
             steps {
                 dir('app') {
-                    sh 'npx nx build --prod'
+                    script {
+                        def imageTag = "${BUILD_NUMBER}"
+                        sh """
+                            docker build --platform linux/amd64 -t ${ECR_REGISTRY}/${IMAGE_NAME}:${imageTag} .
+                            docker tag ${ECR_REGISTRY}/${IMAGE_NAME}:${imageTag} ${ECR_REGISTRY}/${IMAGE_NAME}:latest
+                        """
+                        env.IMAGE_TAG = imageTag
+                    }
                 }
             }
         }
         
-        stage('Docker') {
-            when { branch 'main' }
+        stage('Push to ECR') {
             steps {
-                dir('app') {
-                    sh '''
-                        aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPO
-                        docker build -t $ECR_REPO:$IMAGE_TAG .
-                        docker push $ECR_REPO:$IMAGE_TAG
-                    '''
+                script {
+                    withCredentials([aws(credentialsId: 'aws-credentials', region: "${AWS_REGION}")]) {
+                        sh """
+                            aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}
+                            docker push ${ECR_REGISTRY}/${IMAGE_NAME}:${env.IMAGE_TAG}
+                            docker push ${ECR_REGISTRY}/${IMAGE_NAME}:latest
+                        """
+                    }
                 }
             }
         }
         
-        stage('Deploy') {
-            when { branch 'main' }
+        stage('Deploy to AWS') {
             steps {
-                sh '''
-                    aws autoscaling start-instance-refresh \
-                        --auto-scaling-group-name "realworld-dev-app-asg" \
-                        --region $AWS_REGION || echo "Deploy triggered"
-                '''
+                script {
+                    withCredentials([aws(credentialsId: 'aws-credentials', region: "${AWS_REGION}")]) {
+                        sh """
+                            aws autoscaling start-instance-refresh \\
+                                --auto-scaling-group-name ${ASG_NAME} \\
+                                --preferences MinHealthyPercentage=50 \\
+                                --region ${AWS_REGION}
+                        """
+                    }
+                }
+            }
+        }
+        
+        stage('Wait for Deployment') {
+            steps {
+                script {
+                    withCredentials([aws(credentialsId: 'aws-credentials', region: "${AWS_REGION}")]) {
+                        sh """
+                            echo "Waiting for deployment to complete..."
+                            sleep 300
+                            
+                            aws elbv2 describe-target-health \\
+                                --target-group-arn \$(aws elbv2 describe-target-groups \\
+                                    --names "realworld-dev-tg" \\
+                                    --query 'TargetGroups[0].TargetGroupArn' \\
+                                    --output text \\
+                                    --region ${AWS_REGION}) \\
+                                --region ${AWS_REGION}
+                        """
+                    }
+                }
             }
         }
     }
     
     post {
         always {
-            cleanWs()
+            script {
+                try {
+                    sh 'docker system prune -f'
+                } catch (Exception e) {
+                    echo "Docker cleanup failed: ${e.getMessage()}"
+                }
+            }
         }
         success {
-            echo 'Pipeline completed successfully'
+            echo 'Pipeline completed successfully!'
         }
         failure {
-            echo 'Pipeline failed'
+            echo 'Pipeline failed!'
         }
     }
 }
