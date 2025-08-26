@@ -1,135 +1,107 @@
 pipeline {
-    agent any
-    
-    environment {
-        AWS_REGION = 'eu-west-2'
-        ECR_REGISTRY = '475641479654.dkr.ecr.eu-west-2.amazonaws.com'
-        IMAGE_NAME = 'realworld-api'
-        ASG_NAME = 'realworld-dev-app-asg'
-        DATABASE_URL = 'file:./test.db'
-        NODE_ENV = 'test'
-    }
-    
-    stages {
-        stage('Checkout') {
-            steps {
-                checkout scm
-            }
-        }
-        
-        stage('Build Application') {
-            steps {
-                dir('app') {
-                    script {
-                        sh 'npm install'
-                        sh 'npx nx build --prod'
-                    }
-                }
-            }
-        }
-        
-        stage('Run Tests') {
-            steps {
-                dir('app') {
-                    script {
-                        // Run only tests that are working properly
-                        sh 'rm -f test.db*'
-                        sh 'npx prisma generate'
-                        sh 'npx prisma db push --force-reset'
-                        
-                        // Skip the problematic auth.service.test.ts file
-                        sh 'npm test -- --watch=false --runInBand --forceExit --testPathIgnorePatterns="src/tests/services/auth.service.test.ts"'
-                    }
-                }
-            }
-        }
-        
-        stage('Build Docker Image') {
-            steps {
-                dir('app') {
-                    script {
-                        def imageTag = "${BUILD_NUMBER}"
-                        sh """
-                            docker build --platform linux/amd64 -t ${ECR_REGISTRY}/${IMAGE_NAME}:${imageTag} .
-                            docker tag ${ECR_REGISTRY}/${IMAGE_NAME}:${imageTag} ${ECR_REGISTRY}/${IMAGE_NAME}:latest
-                        """
-                        env.IMAGE_TAG = imageTag
-                    }
-                }
-            }
-        }
-        
-        stage('Push to ECR') {
-            steps {
-                script {
-                    withCredentials([aws(credentialsId: 'aws-credentials', region: "${AWS_REGION}")]) {
-                        sh """
-                            aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}
-                            docker push ${ECR_REGISTRY}/${IMAGE_NAME}:${env.IMAGE_TAG}
-                            docker push ${ECR_REGISTRY}/${IMAGE_NAME}:latest
-                        """
-                    }
-                }
-            }
-        }
-        
-        stage('Deploy to AWS') {
-            steps {
-                script {
-                    withCredentials([aws(credentialsId: 'aws-credentials', region: "${AWS_REGION}")]) {
-                        sh """
-                            aws autoscaling start-instance-refresh \\
-                                --auto-scaling-group-name ${ASG_NAME} \\
-                                --preferences MinHealthyPercentage=50 \\
-                                --region ${AWS_REGION}
-                        """
-                    }
-                }
-            }
-        }
-        
-        stage('Verify Deployment') {
-            steps {
-                script {
-                    withCredentials([aws(credentialsId: 'aws-credentials', region: "${AWS_REGION}")]) {
-                        sh """
-                            echo "Waiting for deployment to complete..."
-                            sleep 180
-                            
-                            # Check target health
-                            aws elbv2 describe-target-health \\
-                                --target-group-arn \$(aws elbv2 describe-target-groups \\
-                                    --names "realworld-dev-tg" \\
-                                    --query 'TargetGroups[0].TargetGroupArn' \\
-                                    --output text \\
-                                    --region ${AWS_REGION}) \\
-                                --region ${AWS_REGION}
-                            
-                            # Test the application endpoint
-                            curl -f http://realworld-dev-alb-393589479.eu-west-2.elb.amazonaws.com/health || exit 1
-                            echo "Application deployed successfully!"
-                        """
-                    }
-                }
-            }
-        }
-    }
-    
-    post {
-        always {
-            script {
-                try {
-                    sh 'docker system prune -f'
-                } catch (Exception e) {
-                    echo "Docker cleanup failed: ${e.getMessage()}"
-                }
-            }
-        }
-        success {
-            echo 'Pipeline completed successfully! 🚀'
-        }
-        failure {
-            echo 'Pipeline failed!'
-        }
-    }
+   agent any
+   
+   environment {
+       AWS_REGION = 'eu-west-2'
+       ECR_REGISTRY = '475641479654.dkr.ecr.eu-west-2.amazonaws.com'
+       IMAGE_NAME = 'realworld-api'
+       ASG_NAME = 'realworld-dev-app-asg'
+       DATABASE_URL = 'postgresql://realworld:password@localhost:5432/realworld'
+       NODE_ENV = 'test'
+   }
+   
+   stages {
+       stage('Code Checkout') {
+           steps {
+               checkout scm
+           }
+       }
+       
+       stage('Build & Install Dependencies') {
+           steps {
+               dir('app') {
+                   sh 'npm install'
+                   sh 'npx nx build --prod'
+               }
+           }
+       }
+       
+       stage('Test Suite') {
+           steps {
+               dir('app') {
+                   sh 'npx prisma generate'
+                   sh 'DATABASE_URL="file:./test.db" npx prisma db push --force-reset'
+                   sh 'npm test -- --watch=false --runInBand --forceExit --testPathIgnorePatterns="src/tests/services/auth.service.test.ts"'
+               }
+           }
+       }
+       
+       stage('Docker Image Build') {
+           steps {
+               dir('app') {
+                   script {
+                       def imageTag = "${BUILD_NUMBER}"
+                       sh """
+                           docker build --platform linux/amd64 -t ${ECR_REGISTRY}/${IMAGE_NAME}:${imageTag} .
+                           docker tag ${ECR_REGISTRY}/${IMAGE_NAME}:${imageTag} ${ECR_REGISTRY}/${IMAGE_NAME}:latest
+                       """
+                       env.IMAGE_TAG = imageTag
+                   }
+               }
+           }
+       }
+       
+       stage('Container Registry Push') {
+           steps {
+               script {
+                   withCredentials([aws(credentialsId: 'aws-credentials', region: "${AWS_REGION}")]) {
+                       sh """
+                           aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}
+                           docker push ${ECR_REGISTRY}/${IMAGE_NAME}:${env.IMAGE_TAG}
+                           docker push ${ECR_REGISTRY}/${IMAGE_NAME}:latest
+                       """
+                   }
+               }
+           }
+       }
+       
+       stage('Production Deployment') {
+           steps {
+               script {
+                   withCredentials([aws(credentialsId: 'aws-credentials', region: "${AWS_REGION}")]) {
+                       sh """
+                           aws autoscaling start-instance-refresh \\
+                               --auto-scaling-group-name ${ASG_NAME} \\
+                               --preferences MinHealthyPercentage=50 \\
+                               --region ${AWS_REGION}
+                       """
+                   }
+               }
+           }
+       }
+       
+       stage('Health Check') {
+           steps {
+               sh """
+                   echo "Waiting for new instances to come online..."
+                   sleep 180
+                   
+                   curl -f https://dev-api.iasolutions.co.uk/health || exit 1
+                   echo "Health check passed"
+               """
+           }
+       }
+   }
+   
+   post {
+       always {
+           sh 'docker system prune -f || true'
+       }
+       success {
+           echo "Build #${BUILD_NUMBER} deployed to https://dev-api.iasolutions.co.uk"
+       }
+       failure {
+           echo "Build failed at stage: ${env.STAGE_NAME}"
+       }
+   }
 }
