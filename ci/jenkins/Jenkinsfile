@@ -7,6 +7,7 @@ pipeline {
         IMAGE_NAME = 'realworld-api'
         ASG_NAME = 'realworld-dev-app-asg'
         DATABASE_URL = 'file:./test.db'
+        NODE_ENV = 'test'
     }
     
     stages {
@@ -31,9 +32,13 @@ pipeline {
             steps {
                 dir('app') {
                     script {
+                        // Clean test environment
+                        sh 'rm -f test.db*'
                         sh 'npx prisma generate'
                         sh 'npx prisma db push --force-reset'
-                        sh 'npm test -- --watch=false --passWithNoTests'
+                        
+                        // Run tests with proper isolation
+                        sh 'npm test -- --watch=false --runInBand --forceExit'
                     }
                 }
             }
@@ -83,14 +88,15 @@ pipeline {
             }
         }
         
-        stage('Wait for Deployment') {
+        stage('Verify Deployment') {
             steps {
                 script {
                     withCredentials([aws(credentialsId: 'aws-credentials', region: "${AWS_REGION}")]) {
                         sh """
                             echo "Waiting for deployment to complete..."
-                            sleep 300
+                            sleep 180
                             
+                            # Check target health
                             aws elbv2 describe-target-health \\
                                 --target-group-arn \$(aws elbv2 describe-target-groups \\
                                     --names "realworld-dev-tg" \\
@@ -98,6 +104,10 @@ pipeline {
                                     --output text \\
                                     --region ${AWS_REGION}) \\
                                 --region ${AWS_REGION}
+                            
+                            # Test the application endpoint
+                            curl -f http://realworld-dev-alb-393589479.eu-west-2.elb.amazonaws.com/health || exit 1
+                            echo "Application deployed successfully!"
                         """
                     }
                 }
