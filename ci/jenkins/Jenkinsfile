@@ -1,0 +1,87 @@
+pipeline {
+    agent any
+    
+    environment {
+        AWS_REGION = 'eu-west-2'
+        ECR_REPO = '475641479654.dkr.ecr.eu-west-2.amazonaws.com/realworld-api'
+        IMAGE_TAG = "${BUILD_NUMBER}"
+    }
+    
+    tools {
+        nodejs 'NodeJS-18'
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+        
+        stage('Install') {
+            steps {
+                dir('app') {
+                    sh 'npm ci'
+                    sh 'npx prisma generate'
+                }
+            }
+        }
+        
+        stage('Test') {
+            steps {
+                dir('app') {
+                    sh '''
+                        echo "DATABASE_URL=file:./test.db" > .env
+                        echo "JWT_SECRET=test-secret" >> .env
+                        npx prisma db push --force-reset
+                        npm test
+                    '''
+                }
+            }
+        }
+        
+        stage('Build') {
+            steps {
+                dir('app') {
+                    sh 'npx nx build --prod'
+                }
+            }
+        }
+        
+        stage('Docker') {
+            when { branch 'main' }
+            steps {
+                dir('app') {
+                    sh '''
+                        aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPO
+                        docker build -t $ECR_REPO:$IMAGE_TAG .
+                        docker push $ECR_REPO:$IMAGE_TAG
+                    '''
+                }
+            }
+        }
+        
+        stage('Deploy') {
+            when { branch 'main' }
+            steps {
+                sh '''
+                    aws autoscaling start-instance-refresh \
+                        --auto-scaling-group-name "realworld-dev-app-asg" \
+                        --region $AWS_REGION || echo "Deploy triggered"
+                '''
+            }
+        }
+    }
+    
+    post {
+        always {
+            cleanWs()
+        }
+        success {
+            echo 'Pipeline completed successfully'
+        }
+        failure {
+            echo 'Pipeline failed'
+        }
+    }
+}

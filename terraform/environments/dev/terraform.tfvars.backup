@@ -1,0 +1,9 @@
+aws_region             = "eu-west-2"
+project_name          = "realworld"
+environment           = "dev"
+owner                 = "AlaminIslam"
+vpc_cidr              = "10.0.0.0/16"
+subnet_count          = 2
+jenkins_instance_type = "t3.medium"
+public_key            = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDAFzzAEPjAb0kch66Rv0phoK5dGQA4XJdfC0O+5PnE0KiV2PeIX4MmM2bov6sJ8RFXkUeFqdyTb6TCm/1cu8YybnwZm+TwCdtsj8ythj0p2zXABvBj6Zle8uFwV+A4uUrbpm91ksWclIuRMsgSAQso6PEbyjh98U/dr7wKQKuSkcUm5g0Y74mODYKy0X/LnV5m5obGmjYJGW6wDrQcr28/57H3FH3cTXix3RlEgkODDXY0vz7CrTxotbyb6TRAMg4zZArWPXBfd13FrbCGeS5pv3LWrJeH+LOLmpaxH/R6E1xDvK9j0TK4aQ/ML7D2yaHKqtQ1xyIAtLSXzWDGc54x"
+jenkins_admin_password = "SecurePassword123!"

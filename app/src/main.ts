@@ -6,52 +6,41 @@ import HttpException from './app/models/http-exception.model';
 
 const app = express();
 
-/**
- * App Configuration
- */
-
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(routes);
 
-// Serves images
-app.use(express.static(__dirname + '/assets'));
+app.get('/health', (req: express.Request, res: express.Response) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
 
 app.get('/', (req: express.Request, res: express.Response) => {
   res.json({ status: 'API is running on /api' });
 });
 
-/* eslint-disable */
-app.use(
-  (
-    err: Error | HttpException,
-    req: express.Request,
-    res: express.Response,
-    next: express.NextFunction,
-  ) => {
-    // @ts-ignore
-    if (err && err.name === 'UnauthorizedError') {
-      return res.status(401).json({
-        status: 'error',
-        message: 'missing authorization credentials',
-      });
-      // @ts-ignore
-    } else if (err && err.errorCode) {
-      // @ts-ignore
-      res.status(err.errorCode).json(err.message);
-    } else if (err) {
-      res.status(500).json(err.message);
-    }
-  },
-);
+app.use(routes);
+app.use(express.static(__dirname + '/assets'));
 
-/**
- * Server activation
- */
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (err && err.name === 'UnauthorizedError') {
+    return res.status(401).json({
+      status: 'error',
+      message: 'missing authorization credentials',
+    });
+  } else if (err && err.errorCode) {
+    res.status(err.errorCode).json(err.message);
+  } else if (err) {
+    res.status(500).json(err.message);
+  }
+});
 
-const PORT = process.env.PORT || 3000;
+const PORT = parseInt(process.env.PORT || '3000', 10);
+const HOST = process.env.HOST || '0.0.0.0';
 
-app.listen(PORT, () => {
-  console.info(`server up on port ${PORT}`);
+app.listen(PORT, HOST, () => {
+  console.log(`Server running on ${HOST}:${PORT}`);
 });
