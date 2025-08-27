@@ -26,6 +26,47 @@ pipeline {
            }
        }
        
+       stage('Security Scanning - Dependencies') {
+           steps {
+               dir('app') {
+                   sh '''
+                       npm audit --audit-level moderate
+                       npx audit-ci --moderate
+                   '''
+               }
+           }
+           post {
+               always {
+                   sh 'echo "Dependency scan completed"'
+               }
+           }
+       }
+       
+       stage('Security Scanning - Infrastructure') {
+           parallel {
+               stage('Terraform Security - tfsec') {
+                   steps {
+                       dir('terraform') {
+                           sh '''
+                               curl -s https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh | bash
+                               ./tfsec . --format json --out tfsec-results.json || true
+                               cat tfsec-results.json
+                           '''
+                       }
+                   }
+               }
+               stage('Infrastructure Security - Checkov') {
+                   steps {
+                       sh '''
+                           pip3 install checkov
+                           checkov -d terraform/ --framework terraform --output json --output-file checkov-results.json || true
+                           cat checkov-results.json
+                       '''
+                   }
+               }
+           }
+       }
+       
        stage('Test Suite') {
            steps {
                dir('app') {
@@ -51,10 +92,27 @@ pipeline {
            }
        }
        
+       stage('Container Security Scanning') {
+           steps {
+               script {
+                   sh '''
+                       curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+                       trivy image --format json --output trivy-results.json ${ECR_REGISTRY}/${IMAGE_NAME}:${env.IMAGE_TAG} || true
+                       trivy image --severity HIGH,CRITICAL ${ECR_REGISTRY}/${IMAGE_NAME}:${env.IMAGE_TAG}
+                   '''
+               }
+           }
+           post {
+               always {
+                   archiveArtifacts artifacts: 'trivy-results.json', allowEmptyArchive: true
+               }
+           }
+       }
+       
        stage('Container Registry Push') {
            steps {
                script {
-                   withCredentials([aws(credentialsId: 'aws-credentials', region: "${AWS_REGION}")]) {
+                   withCredentials([aws(credentialsId: 'aws-credentials')]) {
                        sh """
                            aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}
                            docker push ${ECR_REGISTRY}/${IMAGE_NAME}:${env.IMAGE_TAG}
@@ -68,7 +126,7 @@ pipeline {
        stage('Production Deployment') {
            steps {
                script {
-                   withCredentials([aws(credentialsId: 'aws-credentials', region: "${AWS_REGION}")]) {
+                   withCredentials([aws(credentialsId: 'aws-credentials')]) {
                        sh """
                            aws autoscaling start-instance-refresh \\
                                --auto-scaling-group-name ${ASG_NAME} \\
@@ -96,12 +154,13 @@ pipeline {
    post {
        always {
            sh 'docker system prune -f || true'
+           archiveArtifacts artifacts: 'terraform/tfsec-results.json,checkov-results.json', allowEmptyArchive: true
        }
        success {
-           echo "Build #${BUILD_NUMBER} deployed to https://dev-api.iasolutions.co.uk"
+           echo "Build #${BUILD_NUMBER} deployed to https://dev-api.iasolutions.co.uk - Security scans completed"
        }
        failure {
-           echo "Build failed at stage: ${env.STAGE_NAME}"
+           echo "Build failed at stage: ${env.STAGE_NAME} - Check security scan results"
        }
    }
 }
