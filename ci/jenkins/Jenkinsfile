@@ -6,7 +6,6 @@ pipeline {
         ECR_REGISTRY = '475641479654.dkr.ecr.eu-west-2.amazonaws.com'
         IMAGE_NAME = 'realworld-api'
         ASG_NAME = 'realworld-dev-app-asg'
-        DATABASE_URL = 'postgresql://realworld:password@localhost:5432/realworld'
         NODE_ENV = 'test'
     }
     
@@ -121,12 +120,18 @@ pipeline {
                 script {
                     if (fileExists('app/package.json')) {
                         dir('app') {
-                            sh 'npx prisma generate'
-                            sh 'DATABASE_URL="file:./test.db" npx prisma db push --force-reset'
-                            sh 'npm test -- --watch=false --runInBand --forceExit'
+                            sh '''
+                                npx prisma generate
+                                export DATABASE_URL="file:./test.db"
+                                npx prisma db push --force-reset
+                                npm test -- --watch=false --runInBand --forceExit
+                            '''
                         }
                     } else {
-                        sh 'npm test'
+                        sh '''
+                            export DATABASE_URL="file:./test.db"
+                            npm test
+                        '''
                     }
                 }
             }
