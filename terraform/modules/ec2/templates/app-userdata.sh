@@ -18,15 +18,21 @@ usermod -aG docker ubuntu
 
 sleep 30
 
-DB_SECRET=$(aws secretsmanager get-secret-value --secret-id "/${project_name}/${environment}/database" --region eu-west-2 --query SecretString --output text)
-JWT_SECRET=$(aws secretsmanager get-secret-value --secret-id "/${project_name}/${environment}/jwt" --region eu-west-2 --query SecretString --output text)
+# Get secrets with proper template variables
+DB_SECRET=$(aws secretsmanager get-secret-value --secret-id "/realworld/dev/database" --region eu-west-2 --query SecretString --output text)
+JWT_SECRET=$(aws secretsmanager get-secret-value --secret-id "/realworld/dev/jwt" --region eu-west-2 --query SecretString --output text)
 
-DATABASE_URL=$(echo $DB_SECRET | jq -r .url)
+# Extract credentials and construct DATABASE_URL
+DB_USERNAME=$(echo $DB_SECRET | jq -r .username)
+DB_PASSWORD=$(echo $DB_SECRET | jq -r .password)
 JWT_SECRET_VALUE=$(echo $JWT_SECRET | jq -r .secret)
 
-aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin 475641479654.dkr.ecr.eu-west-2.amazonaws.com
+# Construct DATABASE_URL for PostgreSQL
+DATABASE_URL="postgresql://$DB_USERNAME:$DB_PASSWORD@${db_endpoint}/realworld"
 
-docker pull --platform linux/amd64 475641479654.dkr.ecr.eu-west-2.amazonaws.com/realworld-api:latest
+aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin ${ecr_registry}
+
+docker pull --platform linux/amd64 ${ecr_registry}/realworld-api:latest
 
 mkdir -p /opt/app
 
@@ -39,7 +45,7 @@ docker run -d \
     -e NODE_ENV="production" \
     -e PORT="3000" \
     -e HOST="0.0.0.0" \
-    475641479654.dkr.ecr.eu-west-2.amazonaws.com/realworld-api:latest
+    ${ecr_registry}/realworld-api:latest
 
 sleep 90
 

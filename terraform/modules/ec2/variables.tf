@@ -90,3 +90,13 @@ variable "common_tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "db_endpoint" {
+  description = "Database endpoint"
+  type        = string
+}
+
+variable "ecr_registry" {
+  description = "ECR registry URL"
+  type        = string
+}

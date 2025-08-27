@@ -58,6 +58,7 @@ module "load_balancer" {
   subnet_ids         = module.vpc.public_subnet_ids
   security_group_ids = [module.security.alb_security_group_id]
   common_tags        = local.common_tags
+  certificate_arn    = module.dns.certificate_arn
 }
 
 module "ec2" {
@@ -79,6 +80,8 @@ module "ec2" {
   app_max_size                  = var.app_max_size
   app_desired_capacity          = var.app_desired_capacity
   jenkins_admin_password        = var.jenkins_admin_password
+  db_endpoint                  = module.rds.db_endpoint
+  ecr_registry                 = "475641479654.dkr.ecr.eu-west-2.amazonaws.com"
   common_tags                   = local.common_tags
 }
 

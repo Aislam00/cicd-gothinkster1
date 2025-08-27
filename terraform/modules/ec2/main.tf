@@ -67,6 +67,8 @@ resource "aws_launch_template" "app" {
   user_data = base64encode(templatefile("${path.module}/templates/app-userdata.sh", {
     project_name = var.project_name
     environment  = var.environment
+    db_endpoint   = var.db_endpoint
+    ecr_registry  = var.ecr_registry
   }))
 
   block_device_mappings {
