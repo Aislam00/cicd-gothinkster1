@@ -60,3 +60,8 @@ output "database_secrets" {
     jwt_secret = module.secrets.jwt_secret_arn
   }
 }
+
+output "frontend_url" {
+  description = "Frontend CloudFront URL"
+  value       = "https://${module.frontend.cloudfront_domain}"
+}
