@@ -23,6 +23,12 @@ variable "security_group_ids" {
   type        = list(string)
 }
 
+variable "certificate_arn" {
+  description = "SSL certificate ARN"
+  type        = string
+  default     = ""
+}
+
 variable "target_port" {
   description = "Port on which targets receive traffic"
   type        = number

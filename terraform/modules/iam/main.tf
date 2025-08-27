@@ -175,3 +175,24 @@ resource "aws_iam_instance_profile" "app" {
 
   tags = var.common_tags
 }
+
+resource "aws_iam_role_policy" "app_secrets" {
+  name = "${var.project_name}-${var.environment}-app-secrets"
+  role = aws_iam_role.app.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:DescribeSecret"
+        ]
+        Resource = [
+          "arn:aws:secretsmanager:*:*:secret:/${var.project_name}/${var.environment}/*"
+        ]
+      }
+    ]
+  })
+}

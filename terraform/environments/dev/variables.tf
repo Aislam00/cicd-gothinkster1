@@ -19,8 +19,9 @@ variable "environment" {
 variable "owner" {
   description = "Resource owner"
   type        = string
-  default     = "AlaminIslam"
+  default     = "DevOps"
 }
+
 
 variable "vpc_cidr" {
   description = "CIDR block for VPC"
@@ -57,6 +58,12 @@ variable "app_instance_type" {
   description = "Instance type for application servers"
   type        = string
   default     = "t3.small"
+}
+
+variable "db_instance_class" {
+  description = "Database instance class"
+  type        = string
+  default     = "db.t3.micro"
 }
 
 variable "app_min_size" {
@@ -106,4 +113,10 @@ variable "jenkins_admin_password" {
     condition     = length(var.jenkins_admin_password) >= 8
     error_message = "Jenkins admin password must be at least 8 characters long."
   }
+}
+
+variable "domain_name" {
+  description = "Root domain name"  
+  type        = string
+  default     = "iasolutions.co.uk"
 }
