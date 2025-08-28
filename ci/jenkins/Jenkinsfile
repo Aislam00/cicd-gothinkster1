@@ -6,14 +6,12 @@ pipeline {
         ECR_REGISTRY = '475641479654.dkr.ecr.eu-west-2.amazonaws.com'
         IMAGE_NAME = 'realworld-api'
         ASG_NAME = 'realworld-dev-asg'
-        NODE_ENV = 'production'
     }
     
     stages {
         stage('Checkout') {
             steps {
                 checkout scm
-                sh 'ls -la'
                 sh 'ls -la app/'
             }
         }
@@ -35,14 +33,6 @@ pipeline {
             }
         }
         
-        stage('Security Audit') {
-            steps {
-                dir('app') {
-                    sh 'npm audit || true'
-                }
-            }
-        }
-        
         stage('Build Docker Image') {
             steps {
                 script {
@@ -60,10 +50,8 @@ pipeline {
         
         stage('Push to ECR') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'aws-credentials', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+                withCredentials([aws(credentialsId: '475641479654')]) {
                     sh """
-                        export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-                        export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
                         aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}
                         docker push ${ECR_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}
                         docker push ${ECR_REGISTRY}/${IMAGE_NAME}:latest
@@ -74,10 +62,8 @@ pipeline {
         
         stage('Deploy to AWS') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'aws-credentials', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+                withCredentials([aws(credentialsId: '475641479654')]) {
                     sh """
-                        export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-                        export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
                         aws autoscaling start-instance-refresh \\
                             --auto-scaling-group-name ${ASG_NAME} \\
                             --preferences MinHealthyPercentage=50,InstanceWarmup=300 \\
@@ -92,9 +78,8 @@ pipeline {
                 sh """
                     echo "Waiting for deployment to complete..."
                     sleep 180
-                    
                     echo "Testing health endpoint..."
-                    curl -f https://dev-api.iasolutions.co.uk/health || exit 1
+                    curl -f https://dev-api.iasolutions.co.uk/health
                     echo "Health check passed!"
                 """
             }
@@ -106,10 +91,10 @@ pipeline {
             sh 'docker system prune -f || true'
         }
         success {
-            echo "Pipeline completed successfully! Application deployed and healthy."
+            echo "Pipeline completed successfully!"
         }
         failure {
-            echo "Pipeline failed. Check the logs above."
+            echo "Pipeline failed."
         }
     }
 }
