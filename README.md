@@ -78,6 +78,8 @@ curl https://dev-api.iasolutions.co.uk/health
 - **Route53 + ACM** - Custom domain with auto-renewing SSL certificates
 - **ECR** - Private container registry for application images
 
+![Infrastructure Security](screenshots/tf-infra.png)
+
 ## Security Features
 
 **Comprehensive Security Scanning:**
@@ -85,8 +87,6 @@ curl https://dev-api.iasolutions.co.uk/health
 - **Checkov** - Infrastructure compliance scanning  
 - **Trivy** - Container vulnerability assessment
 - **npm audit** - Dependency security validation
-
-![Infrastructure Security](screenshots/tf-infra.png)
 
 **Security Implementation:**
 - All application instances in private subnets
@@ -110,9 +110,9 @@ curl https://dev-api.iasolutions.co.uk/health
 ![GitHub Webhook](screenshots/github-webhook.png)
 
 ### Successful Pipeline Execution
-![Successful Workflow](screenshots/succesful-wf.png)
+![Successful Workflow](screenshots/succesfful-webhook1.png)
 
-![Successful Webhook](screenshots/succesfful-webhook1.png)
+![Successful Webhook](screenshots/succesful-wf.png)
 
 ## Monitoring & Operations
 
