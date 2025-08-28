@@ -1,6 +1,6 @@
 # Jenkins CI/CD Project on AWS
 
-**Tech Stack:** Jenkins, Terraform, Node.js Express, GitHub Webhooks, AWS EC2, RDS PostgreSQL
+**Tech Stack:** Jenkins, Terraform, Node.js Express, GitHub Webhooks, AWS EC2, RDS PostgreSQL, Bash Scripting
 
 A complete CI/CD pipeline demonstrating enterprise-grade DevSecOps practices with Jenkins automation, comprehensive security scanning, and production-ready AWS infrastructure. This project showcases modern Infrastructure as Code patterns and automated deployment workflows.
 
@@ -77,8 +77,6 @@ curl https://dev-api.iasolutions.co.uk/health
 - **Route53 + ACM** - Custom domain with auto-renewing SSL certificates
 - **ECR** - Private container registry for application images
 
-![Infrastructure Security](screenshots/tf-infra.png)
-
 ## Security Features
 
 **Comprehensive Security Scanning:**
@@ -86,6 +84,8 @@ curl https://dev-api.iasolutions.co.uk/health
 - **Checkov** - Infrastructure compliance scanning  
 - **Trivy** - Container vulnerability assessment
 - **npm audit** - Dependency security validation
+
+![Infrastructure Security](screenshots/tf-infra.png)
 
 **Security Implementation:**
 - All application instances in private subnets
@@ -109,9 +109,9 @@ curl https://dev-api.iasolutions.co.uk/health
 ![GitHub Webhook](screenshots/github-webhook.png)
 
 ### Successful Pipeline Execution
-![Successful Workflow](screenshots/succesfful-webhook1.png)
+![Successful Workflow](screenshots/succesful-wf.png)
 
-![Successful Webhook](screenshots/succesful-wf.png)
+![Successful Webhook](screenshots/succesfful-webhook1.png)
 
 ## Monitoring & Operations
 
@@ -129,4 +129,4 @@ curl https://dev-api.iasolutions.co.uk/health
 
 This is a complete end-to-end DevSecOps project demonstrating enterprise-grade CI/CD patterns including automated security scanning, Infrastructure as Code, GitHub webhook integration, and production monitoring. The platform showcases real-world Jenkins operations with scalable, secure AWS architecture patterns suitable for production workloads.
 
-The infrastructure includes 11 Terraform modules managing everything from VPC networking to secrets management, demonstrating modular design principles and environment separation that would be used in enterprise settings.
+The infrastructure includes 11 Terraform modules and 100+ AWS resources managing everything from VPC networking to secrets management, demonstrating modular design principles and environment separation that would be used in enterprise settings.
