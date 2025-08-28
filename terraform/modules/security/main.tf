@@ -9,10 +9,8 @@ locals {
 resource "aws_security_group" "jenkins" {
   name_prefix = "${var.project_name}-${var.environment}-jenkins-"
   vpc_id      = var.vpc_id
-  description = "Security group for Jenkins server"
 
   ingress {
-    description = "SSH access from specific IP"
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
@@ -20,7 +18,6 @@ resource "aws_security_group" "jenkins" {
   }
 
   ingress {
-    description = "Jenkins web interface from specific IP"
     from_port   = 8080
     to_port     = 8080
     protocol    = "tcp"
@@ -28,7 +25,6 @@ resource "aws_security_group" "jenkins" {
   }
 
   ingress {
-    description = "GitHub webhooks"
     from_port   = 8080
     to_port     = 8080
     protocol    = "tcp"
@@ -36,7 +32,6 @@ resource "aws_security_group" "jenkins" {
   }
 
   egress {
-    description = "HTTPS outbound"
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
@@ -44,7 +39,6 @@ resource "aws_security_group" "jenkins" {
   }
 
   egress {
-    description = "HTTP outbound"
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
@@ -52,7 +46,6 @@ resource "aws_security_group" "jenkins" {
   }
 
   egress {
-    description = "DNS outbound"
     from_port   = 53
     to_port     = 53
     protocol    = "udp"
@@ -71,10 +64,8 @@ resource "aws_security_group" "jenkins" {
 resource "aws_security_group" "app" {
   name_prefix = "${var.project_name}-${var.environment}-app-"
   vpc_id      = var.vpc_id
-  description = "Security group for application servers"
 
   ingress {
-    description     = "HTTP from ALB"
     from_port       = 3000
     to_port         = 3000
     protocol        = "tcp"
@@ -82,7 +73,6 @@ resource "aws_security_group" "app" {
   }
 
   ingress {
-    description     = "SSH from Jenkins"
     from_port       = 22
     to_port         = 22
     protocol        = "tcp"
@@ -90,7 +80,6 @@ resource "aws_security_group" "app" {
   }
 
   egress {
-    description = "HTTPS outbound"
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
@@ -98,7 +87,6 @@ resource "aws_security_group" "app" {
   }
 
   egress {
-    description = "HTTP outbound"
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
@@ -106,7 +94,6 @@ resource "aws_security_group" "app" {
   }
 
   egress {
-    description = "Database access"
     from_port   = 5432
     to_port     = 5432
     protocol    = "tcp"
@@ -125,10 +112,8 @@ resource "aws_security_group" "app" {
 resource "aws_security_group" "alb" {
   name_prefix = "${var.project_name}-${var.environment}-alb-"
   vpc_id      = var.vpc_id
-  description = "Security group for Application Load Balancer"
 
   ingress {
-    description = "HTTP from internet"
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
@@ -136,7 +121,6 @@ resource "aws_security_group" "alb" {
   }
 
   ingress {
-    description = "HTTPS from internet"
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
@@ -144,7 +128,6 @@ resource "aws_security_group" "alb" {
   }
 
   egress {
-    description = "HTTP to application servers"
     from_port   = 3000
     to_port     = 3000
     protocol    = "tcp"

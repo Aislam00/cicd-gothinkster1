@@ -1,5 +1,4 @@
 resource "aws_kms_key" "logs" {
-  description             = "KMS key for CloudWatch logs encryption"
   deletion_window_in_days = 7
 
   policy = jsonencode({
@@ -46,7 +45,7 @@ resource "aws_cloudwatch_log_group" "app" {
   name              = "/aws/ec2/${var.project_name}-${var.environment}-app"
   retention_in_days = var.log_retention_days
   kms_key_id        = aws_kms_key.logs.arn
-  
+
   tags = var.common_tags
 }
 
@@ -54,7 +53,7 @@ resource "aws_cloudwatch_log_group" "jenkins" {
   name              = "/aws/ec2/${var.project_name}-${var.environment}-jenkins"
   retention_in_days = var.log_retention_days
   kms_key_id        = aws_kms_key.logs.arn
-  
+
   tags = var.common_tags
 }
 
@@ -115,7 +114,6 @@ resource "aws_cloudwatch_metric_alarm" "high_cpu" {
   period              = "300"
   statistic           = "Average"
   threshold           = "80"
-  alarm_description   = "This metric monitors ec2 cpu utilization"
 
   dimensions = {
     AutoScalingGroupName = var.asg_name
@@ -133,7 +131,6 @@ resource "aws_cloudwatch_metric_alarm" "target_5xx_errors" {
   period              = "300"
   statistic           = "Sum"
   threshold           = "10"
-  alarm_description   = "This metric monitors 5XX errors from targets"
 
   dimensions = {
     LoadBalancer = var.alb_full_name

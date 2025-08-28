@@ -6,7 +6,7 @@ resource "aws_route53_record" "app" {
   zone_id = data.aws_route53_zone.main.zone_id
   name    = var.app_subdomain
   type    = "A"
-  
+
   alias {
     name                   = var.alb_dns_name
     zone_id                = var.alb_zone_id
@@ -17,11 +17,11 @@ resource "aws_route53_record" "app" {
 resource "aws_acm_certificate" "app" {
   domain_name       = var.app_subdomain
   validation_method = "DNS"
-  
+
   lifecycle {
     create_before_destroy = true
   }
-  
+
   tags = var.common_tags
 }
 
@@ -33,7 +33,7 @@ resource "aws_route53_record" "cert_validation" {
       type   = dvo.resource_record_type
     }
   }
-  
+
   zone_id = data.aws_route53_zone.main.zone_id
   name    = each.value.name
   type    = each.value.type

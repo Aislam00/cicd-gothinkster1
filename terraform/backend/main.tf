@@ -26,7 +26,6 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "terraform_state" 
 }
 
 resource "aws_kms_key" "terraform_state" {
-  description             = "KMS key for Terraform state bucket encryption"
   deletion_window_in_days = 7
 
   tags = {
@@ -84,7 +83,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "terraform_state" {
 
 resource "aws_s3_bucket_notification" "terraform_state" {
   bucket = aws_s3_bucket.terraform_state.id
-  
+
   topic {
     topic_arn = aws_sns_topic.terraform_state_notifications.arn
     events    = ["s3:ObjectCreated:*"]
@@ -113,7 +112,7 @@ resource "aws_sns_topic_policy" "terraform_state_notifications" {
         Principal = {
           Service = "s3.amazonaws.com"
         }
-        Action = "SNS:Publish"
+        Action   = "SNS:Publish"
         Resource = aws_sns_topic.terraform_state_notifications.arn
         Condition = {
           StringEquals = {
@@ -128,9 +127,9 @@ resource "aws_sns_topic_policy" "terraform_state_notifications" {
 data "aws_caller_identity" "current" {}
 
 resource "aws_dynamodb_table" "terraform_locks" {
-  name           = "terraform-state-locks"
-  billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "LockID"
+  name         = "terraform-state-locks"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "LockID"
 
   attribute {
     name = "LockID"

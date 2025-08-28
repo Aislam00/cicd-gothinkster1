@@ -55,8 +55,8 @@ resource "aws_instance" "jenkins" {
 
   user_data = base64encode(templatefile("${path.module}/templates/jenkins-userdata.sh", {
     jenkins_admin_password = var.jenkins_admin_password
-    db_endpoint           = var.db_endpoint
-    ecr_registry         = var.ecr_registry
+    db_endpoint            = var.db_endpoint
+    ecr_registry           = var.ecr_registry
   }))
 
   tags = merge(var.common_tags, {
@@ -119,10 +119,10 @@ resource "aws_launch_template" "app" {
 }
 
 resource "aws_autoscaling_group" "app" {
-  name                = "${var.project_name}-${var.environment}-asg"
-  vpc_zone_identifier = var.private_subnet_ids
-  target_group_arns   = var.target_group_arns
-  health_check_type   = "ELB"
+  name                      = "${var.project_name}-${var.environment}-asg"
+  vpc_zone_identifier       = var.private_subnet_ids
+  target_group_arns         = var.target_group_arns
+  health_check_type         = "ELB"
   health_check_grace_period = 300
 
   min_size         = var.app_min_size

@@ -6,6 +6,7 @@ pipeline {
         ECR_REGISTRY = '475641479654.dkr.ecr.eu-west-2.amazonaws.com'
         IMAGE_NAME = 'realworld-api'
         ASG_NAME = 'realworld-dev-asg'
+        PATH = "/usr/local/bin:/var/lib/jenkins/.local/bin:$PATH"
     }
     
     stages {
@@ -33,6 +34,52 @@ pipeline {
             }
         }
         
+        stage('Security Scanning') {
+            parallel {
+                stage('Dependency Audit') {
+                    steps {
+                        dir('app') {
+                            sh 'npm audit --json > npm-audit.json || true'
+                            sh 'npm audit || true'
+                        }
+                    }
+                    post {
+                        always {
+                            archiveArtifacts artifacts: '**/npm-audit.json', allowEmptyArchive: true
+                        }
+                    }
+                }
+                
+                stage('Infrastructure Security - tfsec') {
+                    steps {
+                        sh '''
+                            tfsec terraform/ --format json --out tfsec-results.json || true
+                            tfsec terraform/ || true
+                        '''
+                    }
+                    post {
+                        always {
+                            archiveArtifacts artifacts: 'tfsec-results.json', allowEmptyArchive: true
+                        }
+                    }
+                }
+                
+                stage('Infrastructure Security - Checkov') {
+                    steps {
+                        sh '''
+                            checkov -d terraform/ --framework terraform --output json --output-file checkov-results.json || true
+                            checkov -d terraform/ --framework terraform --compact || true
+                        '''
+                    }
+                    post {
+                        always {
+                            archiveArtifacts artifacts: 'checkov-results.json', allowEmptyArchive: true
+                        }
+                    }
+                }
+            }
+        }
+        
         stage('Build Docker Image') {
             steps {
                 script {
@@ -44,6 +91,20 @@ pipeline {
                         """
                     }
                     env.IMAGE_TAG = imageTag
+                }
+            }
+        }
+        
+        stage('Container Security Scan') {
+            steps {
+                sh '''
+                    trivy image --format json --output trivy-results.json ${ECR_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} || true
+                    trivy image --severity HIGH,CRITICAL ${ECR_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} || true
+                '''
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'trivy-results.json', allowEmptyArchive: true
                 }
             }
         }

@@ -4,7 +4,7 @@ set -e
 export DEBIAN_FRONTEND=noninteractive
 
 apt-get update
-apt-get install -y curl wget gnupg2 software-properties-common apt-transport-https ca-certificates
+apt-get install -y curl wget gnupg2 software-properties-common apt-transport-https ca-certificates python3 python3-pip
 
 curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key | gpg --dearmor -o /usr/share/keyrings/jenkins-keyring.gpg
 echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.gpg] https://pkg.jenkins.io/debian-stable binary/ | tee /etc/apt/sources.list.d/jenkins.list > /dev/null
@@ -21,6 +21,16 @@ systemctl enable jenkins docker
 systemctl start docker jenkins
 
 usermod -aG docker jenkins ubuntu
+
+mkdir -p /usr/local/bin
+
+curl -s https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh | bash -s -- -b /usr/local/bin
+chmod +x /usr/local/bin/tfsec
+
+curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+chmod +x /usr/local/bin/trivy
+
+pip3 install checkov
 
 sleep 30
 

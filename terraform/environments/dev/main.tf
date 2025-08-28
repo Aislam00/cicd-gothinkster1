@@ -29,7 +29,7 @@ locals {
 
 module "vpc" {
   source = "../../modules/vpc"
-  
+
   project_name = var.project_name
   environment  = var.environment
   vpc_cidr     = var.vpc_cidr
@@ -39,7 +39,7 @@ module "vpc" {
 
 module "iam" {
   source = "../../modules/iam"
-  
+
   project_name = var.project_name
   environment  = var.environment
   common_tags  = local.common_tags
@@ -47,7 +47,7 @@ module "iam" {
 
 module "ecr" {
   source = "../../modules/ecr"
-  
+
   project_name = var.project_name
   environment  = var.environment
   common_tags  = local.common_tags
@@ -55,7 +55,7 @@ module "ecr" {
 
 module "security" {
   source = "../../modules/security"
-  
+
   project_name = var.project_name
   environment  = var.environment
   vpc_id       = module.vpc.vpc_id
@@ -64,21 +64,21 @@ module "security" {
 
 module "secrets" {
   source = "../../modules/secrets"
-  
-  project_name   = var.project_name
-  environment    = var.environment
-  db_secret_name = "/${var.project_name}/${var.environment}/database"
+
+  project_name    = var.project_name
+  environment     = var.environment
+  db_secret_name  = "/${var.project_name}/${var.environment}/database"
   jwt_secret_name = "/${var.project_name}/${var.environment}/jwt"
-  db_username    = "realworld"
-  db_host        = ""
-  db_port        = "5432"
-  db_name        = "realworld"
-  common_tags    = local.common_tags
+  db_username     = "realworld"
+  db_host         = ""
+  db_port         = "5432"
+  db_name         = "realworld"
+  common_tags     = local.common_tags
 }
 
 module "rds" {
   source = "../../modules/rds"
-  
+
   project_name              = var.project_name
   environment               = var.environment
   vpc_id                    = module.vpc.vpc_id
@@ -92,14 +92,14 @@ module "rds" {
   db_username               = "realworld"
   db_password               = module.secrets.db_password
   backup_retention_period   = 7
-  multi_az                 = false
-  skip_final_snapshot      = true
-  common_tags              = local.common_tags
+  multi_az                  = false
+  skip_final_snapshot       = true
+  common_tags               = local.common_tags
 }
 
 module "load_balancer" {
   source = "../../modules/load_balancer"
-  
+
   project_name       = var.project_name
   environment        = var.environment
   vpc_id             = module.vpc.vpc_id
@@ -111,17 +111,17 @@ module "load_balancer" {
 
 module "dns" {
   source = "../../modules/dns"
-  
-  domain_name    = var.domain_name
-  app_subdomain  = "${var.environment}-api.${var.domain_name}"
-  alb_dns_name   = module.load_balancer.load_balancer_dns_name
-  alb_zone_id    = module.load_balancer.load_balancer_zone_id
-  common_tags    = local.common_tags
+
+  domain_name   = var.domain_name
+  app_subdomain = "${var.environment}-api.${var.domain_name}"
+  alb_dns_name  = module.load_balancer.load_balancer_dns_name
+  alb_zone_id   = module.load_balancer.load_balancer_zone_id
+  common_tags   = local.common_tags
 }
 
 module "ec2" {
   source = "../../modules/ec2"
-  
+
   project_name                  = var.project_name
   environment                   = var.environment
   public_subnet_ids             = module.vpc.public_subnet_ids
@@ -138,30 +138,30 @@ module "ec2" {
   app_max_size                  = var.app_max_size
   app_desired_capacity          = var.app_desired_capacity
   jenkins_admin_password        = var.jenkins_admin_password
-  db_endpoint                  = module.rds.db_endpoint
-  ecr_registry                 = "475641479654.dkr.ecr.eu-west-2.amazonaws.com"
+  db_endpoint                   = module.rds.db_endpoint
+  ecr_registry                  = "475641479654.dkr.ecr.eu-west-2.amazonaws.com"
   common_tags                   = local.common_tags
 }
 
 module "monitoring" {
   source = "../../modules/monitoring"
-  
-  project_name     = var.project_name
-  environment      = var.environment
-  aws_region       = var.aws_region
-  alb_full_name    = module.load_balancer.load_balancer_arn
-  asg_name         = module.ec2.autoscaling_group_name
+
+  project_name       = var.project_name
+  environment        = var.environment
+  aws_region         = var.aws_region
+  alb_full_name      = module.load_balancer.load_balancer_arn
+  asg_name           = module.ec2.autoscaling_group_name
   log_retention_days = 14
-  common_tags      = local.common_tags
+  common_tags        = local.common_tags
 }
 
 module "frontend" {
   source = "../../modules/frontend"
-  
-  project_name    = var.project_name
-  environment     = var.environment
-  domain_name     = var.domain_name
-  common_tags     = local.common_tags
+
+  project_name = var.project_name
+  environment  = var.environment
+  domain_name  = var.domain_name
+  common_tags  = local.common_tags
 
   providers = {
     aws.us_east_1 = aws.us_east_1

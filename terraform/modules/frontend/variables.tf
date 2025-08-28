@@ -11,15 +11,15 @@ variable "domain_name" {
 }
 
 variable "common_tags" {
-  type = map(string)
+  type    = map(string)
   default = {}
 }
 
 terraform {
   required_providers {
     aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
+      source                = "hashicorp/aws"
+      version               = "~> 5.0"
       configuration_aliases = [aws.us_east_1]
     }
   }

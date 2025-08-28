@@ -26,7 +26,6 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "frontend" {
 }
 
 resource "aws_kms_key" "frontend" {
-  description             = "KMS key for frontend S3 bucket encryption"
   deletion_window_in_days = 7
   tags                    = var.common_tags
 }
@@ -80,7 +79,6 @@ resource "aws_s3_bucket_lifecycle_configuration" "frontend" {
 
 resource "aws_cloudfront_origin_access_control" "frontend" {
   name                              = "${var.project_name}-${var.environment}-oac"
-  description                       = "OAC for frontend S3 bucket"
   origin_access_control_origin_type = "s3"
   signing_behavior                  = "always"
   signing_protocol                  = "sigv4"
@@ -115,8 +113,8 @@ resource "aws_s3_bucket_policy" "frontend" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid       = "AllowCloudFrontAccess"
-        Effect    = "Allow"
+        Sid    = "AllowCloudFrontAccess"
+        Effect = "Allow"
         Principal = {
           Service = "cloudfront.amazonaws.com"
         }
@@ -183,8 +181,8 @@ resource "aws_wafv2_web_acl" "cloudfront" {
 
     visibility_config {
       cloudwatch_metrics_enabled = true
-      metric_name                 = "CommonRuleSetMetric"
-      sampled_requests_enabled    = true
+      metric_name                = "CommonRuleSetMetric"
+      sampled_requests_enabled   = true
     }
   }
 
@@ -205,15 +203,15 @@ resource "aws_wafv2_web_acl" "cloudfront" {
 
     visibility_config {
       cloudwatch_metrics_enabled = true
-      metric_name                 = "Log4jRuleSetMetric"
-      sampled_requests_enabled    = true
+      metric_name                = "Log4jRuleSetMetric"
+      sampled_requests_enabled   = true
     }
   }
 
   visibility_config {
     cloudwatch_metrics_enabled = true
-    metric_name                 = "CloudFrontWAF"
-    sampled_requests_enabled    = true
+    metric_name                = "CloudFrontWAF"
+    sampled_requests_enabled   = true
   }
 
   provider = aws.us_east_1
@@ -228,7 +226,7 @@ resource "aws_cloudfront_distribution" "frontend" {
 
   enabled             = true
   default_root_object = "index.html"
-  web_acl_id         = aws_wafv2_web_acl.cloudfront.arn
+  web_acl_id          = aws_wafv2_web_acl.cloudfront.arn
 
   default_cache_behavior {
     allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]

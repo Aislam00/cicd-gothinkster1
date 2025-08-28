@@ -10,10 +10,8 @@ resource "aws_db_subnet_group" "main" {
 resource "aws_security_group" "rds" {
   name_prefix = "${var.project_name}-${var.environment}-rds-"
   vpc_id      = var.vpc_id
-  description = "Security group for RDS database"
 
   ingress {
-    description     = "PostgreSQL access from application servers"
     from_port       = 5432
     to_port         = 5432
     protocol        = "tcp"
@@ -21,7 +19,6 @@ resource "aws_security_group" "rds" {
   }
 
   ingress {
-    description     = "PostgreSQL access from Jenkins for migrations"
     from_port       = 5432
     to_port         = 5432
     protocol        = "tcp"
@@ -29,7 +26,6 @@ resource "aws_security_group" "rds" {
   }
 
   egress {
-    description = "PostgreSQL outbound for replication"
     from_port   = 5432
     to_port     = 5432
     protocol    = "tcp"
@@ -54,8 +50,8 @@ resource "aws_db_instance" "main" {
 
   allocated_storage     = var.allocated_storage
   max_allocated_storage = var.max_allocated_storage
-  storage_type         = "gp3"
-  storage_encrypted    = true
+  storage_type          = "gp3"
+  storage_encrypted     = true
 
   db_name  = var.db_name
   username = var.db_username
@@ -65,11 +61,11 @@ resource "aws_db_instance" "main" {
   vpc_security_group_ids = [aws_security_group.rds.id]
 
   backup_retention_period = var.backup_retention_period
-  backup_window          = "03:00-04:00"
-  maintenance_window     = "sun:04:00-sun:05:00"
+  backup_window           = "03:00-04:00"
+  maintenance_window      = "sun:04:00-sun:05:00"
 
   multi_az                            = var.multi_az
-  publicly_accessible                = false
+  publicly_accessible                 = false
   skip_final_snapshot                 = var.skip_final_snapshot
   deletion_protection                 = false
   auto_minor_version_upgrade          = true

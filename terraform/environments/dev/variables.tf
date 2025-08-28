@@ -1,38 +1,32 @@
 variable "aws_region" {
-  description = "AWS region"
-  type        = string
-  default     = "eu-west-2"
+  type    = string
+  default = "eu-west-2"
 }
 
 variable "project_name" {
-  description = "Name of the project"
-  type        = string
-  default     = "realworld"
+  type    = string
+  default = "realworld"
 }
 
 variable "environment" {
-  description = "Environment name"
-  type        = string
-  default     = "dev"
+  type    = string
+  default = "dev"
 }
 
 variable "owner" {
-  description = "Resource owner"
-  type        = string
-  default     = "DevOps"
+  type    = string
+  default = "DevOps"
 }
 
 
 variable "vpc_cidr" {
-  description = "CIDR block for VPC"
-  type        = string
-  default     = "10.0.0.0/16"
+  type    = string
+  default = "10.0.0.0/16"
 }
 
 variable "subnet_count" {
-  description = "Number of subnets"
-  type        = number
-  default     = 2
+  type    = number
+  default = 2
 
   validation {
     condition     = var.subnet_count >= 2 && var.subnet_count <= 6
@@ -41,9 +35,8 @@ variable "subnet_count" {
 }
 
 variable "jenkins_instance_type" {
-  description = "Instance type for Jenkins"
-  type        = string
-  default     = "t3.medium"
+  type    = string
+  default = "t3.medium"
 
   validation {
     condition = contains([
@@ -55,21 +48,18 @@ variable "jenkins_instance_type" {
 }
 
 variable "app_instance_type" {
-  description = "Instance type for application servers"
-  type        = string
-  default     = "t3.small"
+  type    = string
+  default = "t3.small"
 }
 
 variable "db_instance_class" {
-  description = "Database instance class"
-  type        = string
-  default     = "db.t3.micro"
+  type    = string
+  default = "db.t3.micro"
 }
 
 variable "app_min_size" {
-  description = "Minimum app instances"
-  type        = number
-  default     = 1
+  type    = number
+  default = 1
 
   validation {
     condition     = var.app_min_size >= 1
@@ -78,9 +68,8 @@ variable "app_min_size" {
 }
 
 variable "app_max_size" {
-  description = "Maximum app instances"
-  type        = number
-  default     = 3
+  type    = number
+  default = 3
 
   validation {
     condition     = var.app_max_size >= var.app_min_size
@@ -89,14 +78,12 @@ variable "app_max_size" {
 }
 
 variable "app_desired_capacity" {
-  description = "Desired app instances"
-  type        = number
-  default     = 2
+  type    = number
+  default = 2
 }
 
 variable "public_key" {
-  description = "SSH public key"
-  type        = string
+  type = string
 
   validation {
     condition     = can(regex("^ssh-(rsa|ed25519|ecdsa)", var.public_key))
@@ -105,9 +92,8 @@ variable "public_key" {
 }
 
 variable "jenkins_admin_password" {
-  description = "Jenkins admin password"
-  type        = string
-  sensitive   = true
+  type      = string
+  sensitive = true
 
   validation {
     condition     = length(var.jenkins_admin_password) >= 8
@@ -116,7 +102,6 @@ variable "jenkins_admin_password" {
 }
 
 variable "domain_name" {
-  description = "Root domain name"  
-  type        = string
-  default     = "iasolutions.co.uk"
+  type    = string
+  default = "iasolutions.co.uk"
 }

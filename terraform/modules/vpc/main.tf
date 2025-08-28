@@ -27,7 +27,6 @@ resource "aws_default_security_group" "default" {
 }
 
 resource "aws_kms_key" "vpc_logs" {
-  description             = "KMS key for VPC flow logs encryption"
   deletion_window_in_days = 7
 
   policy = jsonencode({
@@ -162,7 +161,7 @@ resource "aws_internet_gateway" "main" {
 resource "aws_eip" "nat" {
   count = var.subnet_count
 
-  domain = "vpc"
+  domain     = "vpc"
   depends_on = [aws_internet_gateway.main]
 
   tags = merge(var.common_tags, {
