@@ -5,178 +5,96 @@ pipeline {
         AWS_REGION = 'eu-west-2'
         ECR_REGISTRY = '475641479654.dkr.ecr.eu-west-2.amazonaws.com'
         IMAGE_NAME = 'realworld-api'
-        ASG_NAME = 'realworld-dev-app-asg'
-        NODE_ENV = 'test'
-        PATH = "/var/lib/jenkins/.local/bin:/var/lib/jenkins/bin:$PATH"
+        ASG_NAME = 'realworld-dev-asg'
+        NODE_ENV = 'production'
     }
     
     stages {
-        stage('Code Checkout') {
+        stage('Checkout') {
             steps {
                 checkout scm
-                sh 'find . -name "package.json" -type f | head -5'
-                sh 'find . -name "*.tf" -type f | head -5'
+                sh 'ls -la'
+                sh 'ls -la app/'
             }
         }
         
-        stage('Build & Install Dependencies') {
+        stage('Install Dependencies') {
+            steps {
+                dir('app') {
+                    sh 'npm install'
+                    sh 'npm run build'
+                }
+            }
+        }
+        
+        stage('Run Tests') {
+            steps {
+                dir('app') {
+                    sh 'npm test'
+                }
+            }
+        }
+        
+        stage('Security Audit') {
+            steps {
+                dir('app') {
+                    sh 'npm audit || true'
+                }
+            }
+        }
+        
+        stage('Build Docker Image') {
             steps {
                 script {
-                    if (fileExists('app/package.json')) {
-                        dir('app') {
-                            sh 'npm install --production=false'
-                            sh 'npm run build || npx nx build --prod || true'
-                        }
-                    }
-                }
-            }
-        }
-        
-        stage('Security Scanning - Dependencies') {
-            steps {
-                script {
-                    if (fileExists('app/package.json')) {
-                        dir('app') {
-                            sh 'npm audit --audit-level high --json > npm-audit.json || true'
-                            sh 'npm audit --audit-level high || true'
-                        }
-                    }
-                }
-            }
-            post {
-                always {
-                    archiveArtifacts artifacts: '**/npm-audit.json', allowEmptyArchive: true
-                }
-            }
-        }
-        
-        stage('Security Scanning - Infrastructure') {
-            parallel {
-                stage('Terraform Security - tfsec') {
-                    steps {
-                        script {
-                            if (fileExists('terraform')) {
-                                sh '''
-                                    mkdir -p $HOME/bin
-                                    curl -s https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh | bash -s -- -b $HOME/bin
-                                    $HOME/bin/tfsec terraform/ --format json --out tfsec-results.json || true
-                                    $HOME/bin/tfsec terraform/ || true
-                                '''
-                            } else {
-                                echo 'No Terraform files found'
-                            }
-                        }
-                    }
-                }
-                stage('Infrastructure Security - Checkov') {
-                    steps {
-                        script {
-                            if (fileExists('terraform')) {
-                                sh '''
-                                    pip3 install checkov --user
-                                    export PATH="/var/lib/jenkins/.local/bin:$PATH"
-                                    checkov -d terraform/ --framework terraform --output json --output-file checkov-results.json || true
-                                    checkov -d terraform/ --framework terraform --compact || true
-                                '''
-                            } else {
-                                echo 'No Terraform files found'
-                            }
-                        }
-                    }
-                }
-            }
-            post {
-                always {
-                    archiveArtifacts artifacts: '*-results.json', allowEmptyArchive: true
-                }
-            }
-        }
-        
-        stage('Test Suite') {
-            steps {
-                script {
-                    if (fileExists('app/package.json')) {
-                        dir('app') {
-                            sh '''
-                                export DATABASE_URL="file:./test.db"
-                                npx prisma generate || true
-                                npx prisma db push --force-reset || true
-                                npm test -- --watch=false --runInBand --forceExit || true
-                            '''
-                        }
-                    }
-                }
-            }
-        }
-        
-        stage('Docker Image Build') {
-            steps {
-                script {
-                    def imageTag = "${BUILD_NUMBER}"
-                    if (fileExists('app/Dockerfile')) {
-                        dir('app') {
-                            sh """
-                                docker build --platform linux/amd64 -t ${ECR_REGISTRY}/${IMAGE_NAME}:${imageTag} .
-                                docker tag ${ECR_REGISTRY}/${IMAGE_NAME}:${imageTag} ${ECR_REGISTRY}/${IMAGE_NAME}:latest
-                            """
-                        }
+                    def imageTag = env.BUILD_NUMBER
+                    dir('app') {
+                        sh """
+                            docker build --platform linux/amd64 -t ${ECR_REGISTRY}/${IMAGE_NAME}:${imageTag} .
+                            docker tag ${ECR_REGISTRY}/${IMAGE_NAME}:${imageTag} ${ECR_REGISTRY}/${IMAGE_NAME}:latest
+                        """
                     }
                     env.IMAGE_TAG = imageTag
                 }
             }
         }
         
-        stage('Container Security Scanning') {
+        stage('Push to ECR') {
             steps {
-                sh '''
-                    mkdir -p $HOME/bin
-                    curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b $HOME/bin
-                    $HOME/bin/trivy image --format json --output trivy-results.json ${ECR_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} || true
-                    $HOME/bin/trivy image --severity HIGH,CRITICAL ${ECR_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} || true
-                '''
-            }
-            post {
-                always {
-                    archiveArtifacts artifacts: 'trivy-results.json', allowEmptyArchive: true
+                withCredentials([aws(credentialsId: 'aws-credentials', region: env.AWS_REGION)]) {
+                    sh """
+                        aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}
+                        docker push ${ECR_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}
+                        docker push ${ECR_REGISTRY}/${IMAGE_NAME}:latest
+                    """
                 }
             }
         }
         
-        stage('Container Registry Push') {
+        stage('Deploy to AWS') {
             steps {
-                script {
-                    withCredentials([aws(credentialsId: 'aws-credentials')]) {
-                        sh """
-                            aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}
-                            docker push ${ECR_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}
-                            docker push ${ECR_REGISTRY}/${IMAGE_NAME}:latest
-                        """
-                    }
-                }
-            }
-        }
-        
-        stage('Production Deployment') {
-            steps {
-                script {
-                    withCredentials([aws(credentialsId: 'aws-credentials')]) {
-                        sh """
-                            aws autoscaling start-instance-refresh \\
-                                --auto-scaling-group-name ${ASG_NAME} \\
-                                --preferences MinHealthyPercentage=50 \\
-                                --region ${AWS_REGION}
-                        """
-                    }
+                withCredentials([aws(credentialsId: 'aws-credentials', region: env.AWS_REGION)]) {
+                    sh """
+                        aws autoscaling start-instance-refresh \\
+                            --auto-scaling-group-name ${ASG_NAME} \\
+                            --preferences MinHealthyPercentage=50,InstanceWarmup=300 \\
+                            --region ${AWS_REGION}
+                    """
                 }
             }
         }
         
         stage('Health Check') {
             steps {
-                sh """
-                    sleep 180
-                    curl -f https://dev-api.iasolutions.co.uk/health || exit 1
-                """
+                withCredentials([aws(credentialsId: 'aws-credentials', region: env.AWS_REGION)]) {
+                    sh """
+                        echo "Waiting for deployment to complete..."
+                        sleep 180
+                        
+                        echo "Testing health endpoint..."
+                        curl -f https://dev-api.iasolutions.co.uk/health || exit 1
+                        echo "Health check passed!"
+                    """
+                }
             }
         }
     }
@@ -186,10 +104,10 @@ pipeline {
             sh 'docker system prune -f || true'
         }
         success {
-            echo "Build completed successfully"
+            echo "Pipeline completed successfully! Application deployed and healthy."
         }
         failure {
-            echo "Build failed - check logs and security scan results"
+            echo "Pipeline failed. Check the logs above."
         }
     }
 }
