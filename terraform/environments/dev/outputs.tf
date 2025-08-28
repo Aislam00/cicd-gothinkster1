@@ -33,16 +33,6 @@ output "ssh_command" {
   value       = "ssh -i ~/.ssh/id_rsa ubuntu@${module.ec2.jenkins_public_ip}"
 }
 
-output "app_domain" {
-  description = "Application domain"
-  value       = module.dns.app_domain
-}
-
-output "certificate_arn" {
-  description = "SSL certificate ARN"
-  value       = module.dns.certificate_arn
-}
-
 output "dashboard_url" {
   description = "CloudWatch dashboard URL"
   value       = module.monitoring.dashboard_url
@@ -64,4 +54,9 @@ output "database_secrets" {
 output "frontend_url" {
   description = "Frontend CloudFront URL"
   value       = "https://${module.frontend.cloudfront_domain}"
+}
+
+output "ecr_repository_url" {
+  description = "ECR repository URL"
+  value       = module.ecr.repository_url
 }

@@ -1,5 +1,5 @@
 variable "project_name" {
-  description = "Project name"
+  description = "Name of the project"
   type        = string
 }
 
@@ -9,34 +9,39 @@ variable "environment" {
 }
 
 variable "vpc_id" {
-  description = "VPC ID"
+  description = "VPC ID where RDS will be created"
   type        = string
 }
 
 variable "private_subnet_ids" {
-  description = "Private subnet IDs"
+  description = "Private subnet IDs for RDS"
   type        = list(string)
 }
 
 variable "app_security_group_id" {
-  description = "App security group ID"
+  description = "Security group ID for application servers"
+  type        = string
+}
+
+variable "jenkins_security_group_id" {
+  description = "Security group ID for Jenkins server"
   type        = string
 }
 
 variable "db_instance_class" {
-  description = "Database instance class"
+  description = "RDS instance class"
   type        = string
   default     = "db.t3.micro"
 }
 
 variable "allocated_storage" {
-  description = "Allocated storage in GB"
+  description = "Allocated storage for RDS instance"
   type        = number
   default     = 20
 }
 
 variable "max_allocated_storage" {
-  description = "Maximum allocated storage in GB"
+  description = "Maximum allocated storage for RDS instance"
   type        = number
   default     = 100
 }
@@ -54,29 +59,28 @@ variable "db_username" {
 variable "db_password" {
   description = "Database password"
   type        = string
-  sensitive   = true
 }
 
 variable "backup_retention_period" {
-  description = "Backup retention period in days"
+  description = "Backup retention period"
   type        = number
   default     = 7
 }
 
 variable "multi_az" {
-  description = "Enable Multi-AZ"
+  description = "Enable Multi-AZ deployment"
   type        = bool
   default     = false
 }
 
 variable "skip_final_snapshot" {
-  description = "Skip final snapshot"
+  description = "Skip final snapshot when deleting"
   type        = bool
   default     = true
 }
 
 variable "common_tags" {
-  description = "Common tags"
+  description = "Common tags to apply to resources"
   type        = map(string)
   default     = {}
 }

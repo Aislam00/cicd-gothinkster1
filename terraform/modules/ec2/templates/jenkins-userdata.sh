@@ -24,7 +24,7 @@ usermod -aG docker jenkins ubuntu
 
 sleep 30
 
-echo "${jenkins_admin_password}" > /var/lib/jenkins/secrets/initialAdminPassword
+echo "admin123" > /var/lib/jenkins/secrets/initialAdminPassword
 chown jenkins:jenkins /var/lib/jenkins/secrets/initialAdminPassword
 
 mkdir -p /var/lib/jenkins/init.groovy.d
@@ -34,7 +34,7 @@ import hudson.security.*
 
 def instance = Jenkins.getInstance()
 def hudsonRealm = new HudsonPrivateSecurityRealm(false)
-hudsonRealm.createAccount("admin", "${jenkins_admin_password}")
+hudsonRealm.createAccount("admin", "admin123")
 instance.setSecurityRealm(hudsonRealm)
 
 def strategy = new FullControlOnceLoggedInAuthorizationStrategy()

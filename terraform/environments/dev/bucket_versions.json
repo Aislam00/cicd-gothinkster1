@@ -1,0 +1,60 @@
+{
+    "DeleteMarkers": [
+        {
+            "Owner": {
+                "ID": "fdf6d453b8968b9409aa8e7bb0d682af58c183b0af04839f801d8a605cb4d127"
+            },
+            "Key": "asset-manifest.json",
+            "VersionId": "null",
+            "IsLatest": true,
+            "LastModified": "2025-08-27T23:13:10+00:00"
+        },
+        {
+            "Owner": {
+                "ID": "fdf6d453b8968b9409aa8e7bb0d682af58c183b0af04839f801d8a605cb4d127"
+            },
+            "Key": "favicon.ico",
+            "VersionId": "null",
+            "IsLatest": true,
+            "LastModified": "2025-08-27T23:13:10+00:00"
+        },
+        {
+            "Owner": {
+                "ID": "fdf6d453b8968b9409aa8e7bb0d682af58c183b0af04839f801d8a605cb4d127"
+            },
+            "Key": "index.html",
+            "VersionId": "null",
+            "IsLatest": true,
+            "LastModified": "2025-08-27T23:13:10+00:00"
+        },
+        {
+            "Owner": {
+                "ID": "fdf6d453b8968b9409aa8e7bb0d682af58c183b0af04839f801d8a605cb4d127"
+            },
+            "Key": "service-worker.js",
+            "VersionId": "null",
+            "IsLatest": true,
+            "LastModified": "2025-08-27T23:13:10+00:00"
+        },
+        {
+            "Owner": {
+                "ID": "fdf6d453b8968b9409aa8e7bb0d682af58c183b0af04839f801d8a605cb4d127"
+            },
+            "Key": "static/js/main.eb352103.js",
+            "VersionId": "null",
+            "IsLatest": true,
+            "LastModified": "2025-08-27T23:13:10+00:00"
+        },
+        {
+            "Owner": {
+                "ID": "fdf6d453b8968b9409aa8e7bb0d682af58c183b0af04839f801d8a605cb4d127"
+            },
+            "Key": "static/js/main.eb352103.js.map",
+            "VersionId": "null",
+            "IsLatest": true,
+            "LastModified": "2025-08-27T23:13:10+00:00"
+        }
+    ],
+    "RequestCharged": null,
+    "Prefix": ""
+}

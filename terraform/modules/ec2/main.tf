@@ -11,45 +11,61 @@ data "aws_ami" "ubuntu" {
     name   = "virtualization-type"
     values = ["hvm"]
   }
+
+  filter {
+    name   = "architecture"
+    values = ["x86_64"]
+  }
 }
 
 resource "aws_key_pair" "main" {
-  key_name   = "${var.project_name}-${var.environment}-key"
+  key_name   = "${var.project_name}-${var.environment}-keypair"
   public_key = var.public_key
 
-  tags = merge(var.common_tags, {
-    Name = "${var.project_name}-${var.environment}-keypair"
-  })
+  tags = var.common_tags
 }
 
 resource "aws_instance" "jenkins" {
-  ami                    = data.aws_ami.ubuntu.id
-  instance_type          = var.jenkins_instance_type
-  subnet_id              = var.public_subnet_ids[0]
-  vpc_security_group_ids = [var.jenkins_security_group_id]
-  key_name               = aws_key_pair.main.key_name
-  iam_instance_profile   = var.jenkins_instance_profile_name
+  ami           = data.aws_ami.ubuntu.id
+  instance_type = var.jenkins_instance_type
+  key_name      = aws_key_pair.main.key_name
+
+  vpc_security_group_ids      = [var.jenkins_security_group_id]
+  subnet_id                   = var.public_subnet_ids[0]
+  associate_public_ip_address = true
+
+  iam_instance_profile = var.jenkins_instance_profile_name
+
+  monitoring    = true
+  ebs_optimized = true
+
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 1
+    instance_metadata_tags      = "enabled"
+  }
+
+  root_block_device {
+    volume_type           = "gp3"
+    volume_size           = 30
+    encrypted             = true
+    delete_on_termination = true
+  }
 
   user_data = base64encode(templatefile("${path.module}/templates/jenkins-userdata.sh", {
     jenkins_admin_password = var.jenkins_admin_password
-    project_name          = var.project_name
-    environment           = var.environment
+    db_endpoint           = var.db_endpoint
+    ecr_registry         = var.ecr_registry
   }))
-
-  root_block_device {
-    volume_type = "gp3"
-    volume_size = 20
-    encrypted   = true
-
-    tags = merge(var.common_tags, {
-      Name = "${var.project_name}-${var.environment}-jenkins-root"
-    })
-  }
 
   tags = merge(var.common_tags, {
     Name = "${var.project_name}-${var.environment}-jenkins"
-    Type = "jenkins"
   })
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_launch_template" "app" {
@@ -64,39 +80,46 @@ resource "aws_launch_template" "app" {
     name = var.app_instance_profile_name
   }
 
-  user_data = base64encode(templatefile("${path.module}/templates/app-userdata.sh", {
-    project_name = var.project_name
-    environment  = var.environment
-    db_endpoint   = var.db_endpoint
-    ecr_registry  = var.ecr_registry
-  }))
+  monitoring {
+    enabled = true
+  }
+
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 1
+    instance_metadata_tags      = "enabled"
+  }
 
   block_device_mappings {
     device_name = "/dev/sda1"
     ebs {
-      volume_size = 20
-      volume_type = "gp3"
-      encrypted   = true
+      volume_type           = "gp3"
+      volume_size           = 20
+      encrypted             = true
+      delete_on_termination = true
     }
   }
+
+  user_data = base64encode(templatefile("${path.module}/templates/app-userdata.sh", {
+    db_endpoint  = var.db_endpoint
+    ecr_registry = var.ecr_registry
+  }))
 
   tag_specifications {
     resource_type = "instance"
     tags = merge(var.common_tags, {
       Name = "${var.project_name}-${var.environment}-app"
-      Type = "application"
     })
   }
 
   lifecycle {
     create_before_destroy = true
   }
-
-  tags = var.common_tags
 }
 
 resource "aws_autoscaling_group" "app" {
-  name                = "${var.project_name}-${var.environment}-app-asg"
+  name                = "${var.project_name}-${var.environment}-asg"
   vpc_zone_identifier = var.private_subnet_ids
   target_group_arns   = var.target_group_arns
   health_check_type   = "ELB"
@@ -111,10 +134,17 @@ resource "aws_autoscaling_group" "app" {
     version = "$Latest"
   }
 
+  instance_refresh {
+    strategy = "Rolling"
+    preferences {
+      min_healthy_percentage = 50
+    }
+  }
+
   tag {
     key                 = "Name"
-    value               = "${var.project_name}-${var.environment}-app-asg"
-    propagate_at_launch = true
+    value               = "${var.project_name}-${var.environment}-asg"
+    propagate_at_launch = false
   }
 
   dynamic "tag" {
@@ -124,5 +154,9 @@ resource "aws_autoscaling_group" "app" {
       value               = tag.value
       propagate_at_launch = true
     }
+  }
+
+  lifecycle {
+    create_before_destroy = true
   }
 }

@@ -1,28 +1,21 @@
-FROM docker.io/node:lts-alpine
+FROM node:18-alpine
 
-ENV HOST=0.0.0.0
-ENV PORT=3000
+WORKDIR /usr/src/app
 
-WORKDIR /app
+COPY package*.json ./
 
-RUN apk add --no-cache openssl
+RUN npm ci --only=production && npm cache clean --force
 
-RUN addgroup --system api && \
-    adduser --system -G api api
+COPY . .
 
-COPY dist/api api
-COPY src/prisma/schema.prisma api/src/prisma/schema.prisma
-RUN chown -R api:api .
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S nodejs -u 1001
 
-RUN npm --prefix api --omit=dev -f install
-
-RUN cd api && npx prisma generate
-
-USER api
+USER nodejs
 
 EXPOSE 3000
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
 
-CMD [ "node", "api" ]
+CMD ["node", "server.js"]

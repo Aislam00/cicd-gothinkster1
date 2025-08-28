@@ -1,7 +1,6 @@
 resource "random_password" "db_password" {
   length  = 32
   special = true
-  # Exclude characters that RDS doesn't allow: /, @, ", space
   override_special = "!#$%&*()-_=+[]{}<>:?"
 }
 
@@ -14,8 +13,9 @@ resource "random_password" "jwt_secret" {
 }
 
 resource "aws_secretsmanager_secret" "database" {
-  name        = "/realworld/${var.environment}/database"
-  description = "Database credentials for ${var.project_name}-${var.environment}"
+  name                    = "/realworld/${var.environment}/database"
+  description             = "Database credentials for ${var.project_name}-${var.environment}"
+  recovery_window_in_days = 0
   
   tags = var.common_tags
 }
@@ -29,8 +29,9 @@ resource "aws_secretsmanager_secret_version" "database" {
 }
 
 resource "aws_secretsmanager_secret" "jwt" {
-  name        = "/realworld/${var.environment}/jwt"
-  description = "JWT secret for ${var.project_name}-${var.environment}"
+  name                    = "/realworld/${var.environment}/jwt"
+  description             = "JWT secret for ${var.project_name}-${var.environment}"
+  recovery_window_in_days = 0
   
   tags = var.common_tags
 }
@@ -41,7 +42,6 @@ resource "aws_secretsmanager_secret_version" "jwt" {
     secret = random_password.jwt_secret.result
   })
 }
-
 
 resource "aws_iam_policy" "secrets_read" {
   name        = "${var.project_name}-${var.environment}-secrets-read"

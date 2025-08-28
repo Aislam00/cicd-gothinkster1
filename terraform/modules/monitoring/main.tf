@@ -1,6 +1,51 @@
+resource "aws_kms_key" "logs" {
+  description             = "KMS key for CloudWatch logs encryption"
+  deletion_window_in_days = 7
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "Enable IAM User Permissions"
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+        }
+        Action   = "kms:*"
+        Resource = "*"
+      },
+      {
+        Sid    = "Allow CloudWatch Logs"
+        Effect = "Allow"
+        Principal = {
+          Service = "logs.eu-west-2.amazonaws.com"
+        }
+        Action = [
+          "kms:Encrypt",
+          "kms:Decrypt",
+          "kms:ReEncrypt*",
+          "kms:GenerateDataKey*",
+          "kms:DescribeKey"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+
+  tags = var.common_tags
+}
+
+resource "aws_kms_alias" "logs" {
+  name          = "alias/${var.project_name}-${var.environment}-logs"
+  target_key_id = aws_kms_key.logs.key_id
+}
+
+data "aws_caller_identity" "current" {}
+
 resource "aws_cloudwatch_log_group" "app" {
   name              = "/aws/ec2/${var.project_name}-${var.environment}-app"
   retention_in_days = var.log_retention_days
+  kms_key_id        = aws_kms_key.logs.arn
   
   tags = var.common_tags
 }
@@ -8,6 +53,7 @@ resource "aws_cloudwatch_log_group" "app" {
 resource "aws_cloudwatch_log_group" "jenkins" {
   name              = "/aws/ec2/${var.project_name}-${var.environment}-jenkins"
   retention_in_days = var.log_retention_days
+  kms_key_id        = aws_kms_key.logs.arn
   
   tags = var.common_tags
 }

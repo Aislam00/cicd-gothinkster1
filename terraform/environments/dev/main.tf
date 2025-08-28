@@ -12,6 +12,11 @@ provider "aws" {
   }
 }
 
+provider "aws" {
+  alias  = "us_east_1"
+  region = "us-east-1"
+}
+
 locals {
   common_tags = {
     Project     = var.project_name
@@ -40,6 +45,14 @@ module "iam" {
   common_tags  = local.common_tags
 }
 
+module "ecr" {
+  source = "../../modules/ecr"
+  
+  project_name = var.project_name
+  environment  = var.environment
+  common_tags  = local.common_tags
+}
+
 module "security" {
   source = "../../modules/security"
   
@@ -47,6 +60,41 @@ module "security" {
   environment  = var.environment
   vpc_id       = module.vpc.vpc_id
   common_tags  = local.common_tags
+}
+
+module "secrets" {
+  source = "../../modules/secrets"
+  
+  project_name   = var.project_name
+  environment    = var.environment
+  db_secret_name = "/${var.project_name}/${var.environment}/database"
+  jwt_secret_name = "/${var.project_name}/${var.environment}/jwt"
+  db_username    = "realworld"
+  db_host        = ""
+  db_port        = "5432"
+  db_name        = "realworld"
+  common_tags    = local.common_tags
+}
+
+module "rds" {
+  source = "../../modules/rds"
+  
+  project_name              = var.project_name
+  environment               = var.environment
+  vpc_id                    = module.vpc.vpc_id
+  private_subnet_ids        = module.vpc.private_subnet_ids
+  app_security_group_id     = module.security.app_security_group_id
+  jenkins_security_group_id = module.security.jenkins_security_group_id
+  db_instance_class         = "db.t3.micro"
+  allocated_storage         = 20
+  max_allocated_storage     = 100
+  db_name                   = "realworld"
+  db_username               = "realworld"
+  db_password               = module.secrets.db_password
+  backup_retention_period   = 7
+  multi_az                 = false
+  skip_final_snapshot      = true
+  common_tags              = local.common_tags
 }
 
 module "load_balancer" {
@@ -59,6 +107,16 @@ module "load_balancer" {
   security_group_ids = [module.security.alb_security_group_id]
   common_tags        = local.common_tags
   certificate_arn    = module.dns.certificate_arn
+}
+
+module "dns" {
+  source = "../../modules/dns"
+  
+  domain_name    = var.domain_name
+  app_subdomain  = "${var.environment}-api.${var.domain_name}"
+  alb_dns_name   = module.load_balancer.load_balancer_dns_name
+  alb_zone_id    = module.load_balancer.load_balancer_zone_id
+  common_tags    = local.common_tags
 }
 
 module "ec2" {
@@ -85,16 +143,6 @@ module "ec2" {
   common_tags                   = local.common_tags
 }
 
-module "dns" {
-  source = "../../modules/dns"
-  
-  domain_name    = var.domain_name
-  app_subdomain  = "dev-api.${var.domain_name}"
-  alb_dns_name   = module.load_balancer.load_balancer_dns_name
-  alb_zone_id    = module.load_balancer.load_balancer_zone_id
-  common_tags    = local.common_tags
-}
-
 module "monitoring" {
   source = "../../modules/monitoring"
   
@@ -107,39 +155,6 @@ module "monitoring" {
   common_tags      = local.common_tags
 }
 
-module "secrets" {
-  source = "../../modules/secrets"
-  
-  project_name   = var.project_name
-  environment    = var.environment
-  db_secret_name = "/${var.project_name}/${var.environment}/database"
-  jwt_secret_name = "/${var.project_name}/${var.environment}/jwt"
-  db_username    = "realworld"
-  db_host        = module.rds.db_endpoint
-  db_port        = "5432"
-  db_name        = "realworld"
-  common_tags    = local.common_tags
-}
-
-module "rds" {
-  source = "../../modules/rds"
-  
-  project_name            = var.project_name
-  environment             = var.environment
-  vpc_id                  = module.vpc.vpc_id
-  private_subnet_ids      = module.vpc.private_subnet_ids
-  app_security_group_id   = module.security.app_security_group_id
-  db_instance_class       = "db.t3.micro"
-  allocated_storage       = 20
-  max_allocated_storage   = 100
-  db_name                 = "realworld"
-  db_username             = "realworld"
-  db_password             = module.secrets.db_password
-  backup_retention_period = 7
-  multi_az               = false
-  skip_final_snapshot    = true
-  common_tags            = local.common_tags
-}
 module "frontend" {
   source = "../../modules/frontend"
   
@@ -147,9 +162,8 @@ module "frontend" {
   environment     = var.environment
   domain_name     = var.domain_name
   common_tags     = local.common_tags
-}
 
-provider "aws" {
-  alias  = "us_east_1"
-  region = "us-east-1"
+  providers = {
+    aws.us_east_1 = aws.us_east_1
+  }
 }
