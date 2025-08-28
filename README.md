@@ -1,4 +1,3 @@
-Jenkins Test --
 # Jenkins CI/CD Project on AWS
 
 **Tech Stack:** Jenkins, Terraform, Node.js Express, GitHub Webhooks, AWS EC2, RDS PostgreSQL
